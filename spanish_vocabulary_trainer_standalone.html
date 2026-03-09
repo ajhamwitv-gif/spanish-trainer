@@ -1,0 +1,95 @@
+
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Spanish Vocabulary Trainer</title>
+<style>
+body{font-family:Arial;background:#0f172a;color:white;margin:0;padding:20px}
+.container{max-width:800px;margin:auto}
+.card{background:#111827;padding:30px;border-radius:15px}
+.word{font-size:40px;text-align:center;margin:20px 0}
+input{width:100%;padding:12px;font-size:18px;border-radius:8px;border:none;margin-bottom:10px}
+button{padding:12px;border:none;border-radius:8px;font-weight:bold;margin:5px;cursor:pointer}
+.check{background:#a78bfa} .reveal{background:#22c55e} .pronounce{background:#38bdf8}
+.skip{background:#f59e0b} .next{background:#06b6d4}
+.controls{text-align:center}
+.feedback{margin-top:10px;text-align:center;font-size:18px}
+</style>
+</head>
+<body>
+
+<div class="container">
+<h2>Spanish Vocabulary Trainer</h2>
+
+<div class="card">
+<div id="word" class="word"></div>
+
+<input id="answer" placeholder="Type your answer">
+
+<div class="controls">
+<button class="check" onclick="checkAnswer()">Check</button>
+<button class="reveal" onclick="reveal()">Reveal</button>
+<button class="pronounce" onclick="pronounce()">Pronounce</button>
+<button class="skip" onclick="next()">Skip</button>
+<button class="next" onclick="next()">Next</button>
+</div>
+
+<div id="feedback" class="feedback"></div>
+</div>
+</div>
+
+<script>
+
+const deck = [{"spanish": "Hola", "english": "Hello", "topic": "Greetings", "type": "Word"}, {"spanish": "Buenos días", "english": "Good morning", "topic": "Greetings", "type": "Phrase"}, {"spanish": "Buenas tardes", "english": "Good afternoon", "topic": "Greetings", "type": "Phrase"}, {"spanish": "Buenas noches", "english": "Good evening / good night", "topic": "Greetings", "type": "Phrase"}, {"spanish": "Adiós", "english": "Goodbye", "topic": "Greetings", "type": "Word"}, {"spanish": "Gracias", "english": "Thank you", "topic": "Politeness", "type": "Word"}, {"spanish": "Por favor", "english": "Please", "topic": "Politeness", "type": "Phrase"}, {"spanish": "De nada", "english": "You're welcome", "topic": "Politeness", "type": "Phrase"}, {"spanish": "Cómo te llamas", "english": "What is your name", "topic": "Introduction", "type": "Phrase"}, {"spanish": "Me llamo", "english": "My name is", "topic": "Introduction", "type": "Phrase"}]
+let index = 0
+
+function showCard(){
+document.getElementById("word").innerText = deck[index].spanish
+document.getElementById("answer").value = ""
+document.getElementById("feedback").innerText = ""
+}
+
+function similarity(a,b){
+a=a.toLowerCase()
+b=b.toLowerCase()
+let same=0
+for(let i=0;i<Math.min(a.length,b.length);i++){if(a[i]==b[i])same++}
+return Math.round((same/Math.max(a.length,b.length))*100)
+}
+
+function checkAnswer(){
+let user=document.getElementById("answer").value
+let correct=deck[index].english
+let score=similarity(user,correct)
+
+if(score>70){
+document.getElementById("feedback").innerText="Correct ("+score+"%)"
+}else{
+document.getElementById("feedback").innerText="Not correct ("+score+"%) → "+correct
+}
+}
+
+function reveal(){
+document.getElementById("feedback").innerText="Answer: "+deck[index].english
+}
+
+function pronounce(){
+let text=deck[index].spanish
+let msg=new SpeechSynthesisUtterance(text)
+msg.lang="es-ES"
+speechSynthesis.speak(msg)
+}
+
+function next(){
+index=(index+1)%deck.length
+showCard()
+}
+
+showCard()
+
+</script>
+
+</body>
+</html>
