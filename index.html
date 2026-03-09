@@ -1,0 +1,224 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Spanish Vocabulary Trainer Persistent</title>
+<style>
+:root{--bg:#0f172a;--panel:#111827;--line:#334155;--text:#e5e7eb;--muted:#94a3b8;--green:#22c55e;--blue:#38bdf8;--orange:#f59e0b;--violet:#a78bfa}
+*{box-sizing:border-box}
+body{font-family:Arial,sans-serif;background:var(--bg);color:var(--text);margin:0;padding:20px}
+.container{max-width:1100px;margin:auto}
+.box{background:var(--panel);border:1px solid var(--line);border-radius:15px;padding:18px;margin-bottom:14px}
+h1{margin:0 0 8px 0}
+.small{color:var(--muted);font-size:13px;line-height:1.45}
+.stats,.filters,.controls,.footer,.tabs,.lists{display:grid;gap:10px}
+.stats{grid-template-columns:repeat(2,1fr);margin-top:10px}
+.filters{grid-template-columns:1fr}
+.controls{grid-template-columns:repeat(2,1fr);margin-top:12px}
+.footer{grid-template-columns:repeat(3,1fr)}
+.tabs{grid-template-columns:repeat(4,1fr)}
+.lists{grid-template-columns:1fr}
+.stat{background:#0b1220;border:1px solid var(--line);border-radius:10px;padding:10px 12px;font-size:13px}
+label{display:block;color:var(--muted);font-size:12px;margin-bottom:8px;text-transform:uppercase}
+select,input[type="text"],input[type="range"],button{font:inherit}
+select,input[type="text"]{width:100%;padding:12px 14px;min-height:48px;border-radius:10px;border:1px solid #475569;background:#0b1220;color:var(--text)}
+button{width:100%;padding:12px;min-height:48px;border:none;border-radius:10px;font-weight:700;cursor:pointer;color:#111827}
+.modebtn{background:#cbd5e1}.modebtn.active,.tabbtn.active{outline:3px solid #38bdf8}
+.check{background:var(--violet)} .reveal{background:var(--green)} .pronounce{background:var(--blue)} .skip{background:var(--orange)} .next{background:#06b6d4} .secondary,.tabbtn{background:#cbd5e1}
+.badges{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:14px}
+.badge{background:#0b1220;border:1px solid var(--line);border-radius:999px;padding:6px 10px;font-size:12px}
+.word{font-size:clamp(34px,5vw,56px);font-weight:800;text-align:center;line-height:1.1;margin:18px 0}
+.feedback{min-height:44px;text-align:center;line-height:1.4;margin-top:12px}
+.good{color:#86efac}.mid{color:#fde68a}.bad{color:#fca5a5}
+.translation{display:none;margin-top:10px;font-size:28px;text-align:center;color:#cbd5e1}
+.translation.show{display:block}
+.listWrap{display:none}
+.listWrap.active{display:block}
+.item{background:#0b1220;border:1px solid var(--line);border-radius:10px;padding:10px 12px;margin-bottom:8px}
+.itemHead{font-weight:700;margin-bottom:4px}
+.itemMeta{font-size:12px;color:var(--muted)}
+.empty{color:var(--muted);text-align:center;padding:14px}
+@media (min-width:760px){.stats{grid-template-columns:repeat(8,1fr)}.filters{grid-template-columns:1fr 1fr 1fr}.controls{grid-template-columns:repeat(6,1fr)}.lists{grid-template-columns:1fr 1fr 1fr}}
+</style>
+</head>
+<body>
+<div class="container">
+  <div class="box">
+    <h1>Spanish Vocabulary Trainer</h1>
+    <div class="small">Persistent version. Saves score, settings, revealed words, mistakes, and passes on this browser/device. Includes smart Spanish voice selection and slow pronunciation.</div>
+    <div class="stats">
+      <div class="stat">Card: <span id="cardNum">1</span>/<span id="visibleCount">0</span></div>
+      <div class="stat">Database: <span id="totalCount">0</span></div>
+      <div class="stat">Checks: <span id="checks">0</span></div>
+      <div class="stat">Average: <span id="avg">0%</span></div>
+      <div class="stat">Skips: <span id="skips">0</span></div>
+      <div class="stat">Reveals: <span id="reveals">0</span></div>
+      <div class="stat">Mistakes: <span id="mistakesCount">0</span></div>
+      <div class="stat">Passed: <span id="passesCount">0</span></div>
+    </div>
+  </div>
+
+  <div class="box filters">
+    <div>
+      <label>Mode</label>
+      <div class="stats" style="margin-top:0">
+        <button id="mode-random" class="modebtn active" onclick="setMode('random')">Random</button>
+        <button id="mode-s2e" class="modebtn" onclick="setMode('s2e')">Spanish → English</button>
+        <button id="mode-e2s" class="modebtn" onclick="setMode('e2s')">English → Spanish</button>
+      </div>
+    </div>
+    <div>
+      <label>Topic</label>
+      <select id="topic" onchange="setTopic(this.value)">
+        <option value="All">All topics</option>
+      </select>
+    </div>
+    <div>
+      <label>Type</label>
+      <select id="type" onchange="setType(this.value)">
+        <option value="All">All types</option>
+      </select>
+    </div>
+  </div>
+
+  <div class="box">
+    <label>Accuracy threshold: <span id="thresholdText">75%</span></label>
+    <input id="threshold" type="range" min="50" max="100" step="5" value="75" oninput="setThreshold(this.value)">
+  </div>
+
+  <div class="box">
+    <div id="card"></div>
+  </div>
+
+  <div class="box">
+    <div class="tabs">
+      <button class="tabbtn active" id="tab-overview" onclick="showTab('overview')">Overview</button>
+      <button class="tabbtn" id="tab-revealed" onclick="showTab('revealed')">Revealed</button>
+      <button class="tabbtn" id="tab-mistakes" onclick="showTab('mistakes')">Mistakes</button>
+      <button class="tabbtn" id="tab-passes" onclick="showTab('passes')">Passes</button>
+    </div>
+    <div id="list-overview" class="listWrap active">
+      <div class="small" style="padding-top:12px">This app saves your progress automatically in your browser on this device.</div>
+    </div>
+    <div id="list-revealed" class="listWrap"></div>
+    <div id="list-mistakes" class="listWrap"></div>
+    <div id="list-passes" class="listWrap"></div>
+  </div>
+
+  <div class="box footer">
+    <button class="secondary" onclick="shuffleDeck()">Shuffle</button>
+    <button class="secondary" onclick="restartDeck()">Restart Session</button>
+    <button class="secondary" onclick="clearAllSavedData()">Clear Saved Data</button>
+  </div>
+
+  <div class="small" id="msg" style="text-align:center;padding-bottom:14px">Ready.</div>
+</div>
+
+<script>
+const STORAGE_KEY = "spanish_trainer_persistent_v1";
+const baseDeck = [{"id": 1, "spanish": "Hola", "english": "Hello", "topic": "Greetings", "type": "Word"}, {"id": 2, "spanish": "Buenos días", "english": "Good morning", "topic": "Greetings", "type": "Phrase"}, {"id": 3, "spanish": "Buenas tardes", "english": "Good afternoon", "topic": "Greetings", "type": "Phrase"}, {"id": 4, "spanish": "Buenas noches", "english": "Good evening / good night", "topic": "Greetings", "type": "Phrase"}, {"id": 5, "spanish": "Adiós", "english": "Goodbye", "topic": "Greetings", "type": "Word"}, {"id": 6, "spanish": "Chao", "english": "Bye", "topic": "Greetings", "type": "Word"}, {"id": 7, "spanish": "Nos vemos", "english": "See you", "topic": "Greetings", "type": "Phrase"}, {"id": 8, "spanish": "Hasta luego", "english": "See you later", "topic": "Greetings", "type": "Phrase"}, {"id": 9, "spanish": "Qué tal", "english": "How are you", "topic": "Greetings", "type": "Phrase"}, {"id": 10, "spanish": "Cómo estás", "english": "How are you", "topic": "Greetings", "type": "Phrase"}, {"id": 11, "spanish": "Bien", "english": "Good", "topic": "Greetings", "type": "Word"}, {"id": 12, "spanish": "Muy bien", "english": "Very good", "topic": "Greetings", "type": "Phrase"}, {"id": 13, "spanish": "Normal", "english": "So-so", "topic": "Greetings", "type": "Word"}, {"id": 14, "spanish": "Y tú", "english": "And you", "topic": "Greetings", "type": "Phrase"}, {"id": 15, "spanish": "Por favor", "english": "Please", "topic": "Politeness", "type": "Phrase"}, {"id": 16, "spanish": "Gracias", "english": "Thank you", "topic": "Politeness", "type": "Phrase"}, {"id": 17, "spanish": "Muchas gracias", "english": "Thank you very much", "topic": "Politeness", "type": "Phrase"}, {"id": 18, "spanish": "De nada", "english": "You're welcome", "topic": "Politeness", "type": "Phrase"}, {"id": 19, "spanish": "Disculpa", "english": "Excuse me", "topic": "Politeness", "type": "Phrase"}, {"id": 20, "spanish": "Perdón", "english": "Sorry", "topic": "Politeness", "type": "Word"}, {"id": 21, "spanish": "Mucho gusto", "english": "Nice to meet you", "topic": "Introduction", "type": "Phrase"}, {"id": 22, "spanish": "Un gusto", "english": "Nice to meet you", "topic": "Introduction", "type": "Phrase"}, {"id": 23, "spanish": "Encantado", "english": "Nice to meet you (male)", "topic": "Introduction", "type": "Phrase"}, {"id": 24, "spanish": "Encantada", "english": "Nice to meet you (female)", "topic": "Introduction", "type": "Phrase"}, {"id": 25, "spanish": "Cómo te llamas", "english": "What is your name", "topic": "Introduction", "type": "Phrase"}, {"id": 26, "spanish": "Me llamo", "english": "My name is", "topic": "Introduction", "type": "Phrase"}, {"id": 27, "spanish": "Mi nombre es", "english": "My name is", "topic": "Introduction", "type": "Phrase"}, {"id": 28, "spanish": "Yo soy", "english": "I am", "topic": "Introduction", "type": "Phrase"}, {"id": 29, "spanish": "Soy", "english": "I am", "topic": "Introduction", "type": "Phrase"}, {"id": 30, "spanish": "Cuántos años tienes", "english": "How old are you", "topic": "Personal info", "type": "Phrase"}, {"id": 31, "spanish": "Tengo años", "english": "I am … years old", "topic": "Personal info", "type": "Phrase"}, {"id": 32, "spanish": "Es broma", "english": "It's a joke", "topic": "Personal info", "type": "Phrase"}, {"id": 33, "spanish": "De dónde eres", "english": "Where are you from", "topic": "Personal info", "type": "Phrase"}, {"id": 34, "spanish": "Soy de", "english": "I am from", "topic": "Personal info", "type": "Phrase"}, {"id": 35, "spanish": "Nací", "english": "I was born", "topic": "Personal info", "type": "Phrase"}, {"id": 36, "spanish": "Originalmente", "english": "Originally", "topic": "Personal info", "type": "Word"}, {"id": 37, "spanish": "En realidad", "english": "Actually", "topic": "Personal info", "type": "Phrase"}, {"id": 38, "spanish": "Dónde vives", "english": "Where do you live", "topic": "Personal info", "type": "Phrase"}, {"id": 39, "spanish": "Vivo en", "english": "I live in", "topic": "Personal info", "type": "Phrase"}, {"id": 40, "spanish": "Actualmente", "english": "Currently", "topic": "Personal info", "type": "Word"}, {"id": 41, "spanish": "Desde hace", "english": "Since / for", "topic": "Personal info", "type": "Phrase"}, {"id": 42, "spanish": "Toda mi vida", "english": "My whole life", "topic": "Personal info", "type": "Phrase"}, {"id": 43, "spanish": "Tú", "english": "You (informal)", "topic": "Pronouns", "type": "Phrase"}, {"id": 44, "spanish": "Vos", "english": "You (regional informal)", "topic": "Pronouns", "type": "Phrase"}, {"id": 45, "spanish": "Usted", "english": "You (formal)", "topic": "Pronouns", "type": "Phrase"}, {"id": 46, "spanish": "Estoy cansado", "english": "I am tired", "topic": "Feelings", "type": "Phrase"}, {"id": 47, "spanish": "Estoy cansada", "english": "I am tired", "topic": "Feelings", "type": "Phrase"}, {"id": 48, "spanish": "Estoy contento", "english": "I am happy", "topic": "Feelings", "type": "Phrase"}, {"id": 49, "spanish": "Estoy contenta", "english": "I am happy", "topic": "Feelings", "type": "Phrase"}, {"id": 50, "spanish": "Estoy enojado", "english": "I am angry", "topic": "Feelings", "type": "Phrase"}, {"id": 51, "spanish": "Estoy enojada", "english": "I am angry", "topic": "Feelings", "type": "Phrase"}, {"id": 52, "spanish": "No entiendo", "english": "I don't understand", "topic": "Communication", "type": "Phrase"}, {"id": 53, "spanish": "Me entiendes", "english": "Do you understand me", "topic": "Communication", "type": "Phrase"}, {"id": 54, "spanish": "Puedes repetir", "english": "Can you repeat", "topic": "Communication", "type": "Phrase"}, {"id": 55, "spanish": "Puedes repetirlo", "english": "Can you repeat it", "topic": "Communication", "type": "Phrase"}, {"id": 56, "spanish": "Más lentamente", "english": "More slowly", "topic": "Communication", "type": "Phrase"}, {"id": 57, "spanish": "Cómo se dice esto", "english": "How do you say this", "topic": "Communication", "type": "Phrase"}, {"id": 58, "spanish": "Cómo se llama esto", "english": "What is this called", "topic": "Communication", "type": "Phrase"}, {"id": 59, "spanish": "Hablas inglés", "english": "Do you speak English", "topic": "Languages", "type": "Phrase"}, {"id": 60, "spanish": "Hablas español", "english": "Do you speak Spanish", "topic": "Languages", "type": "Phrase"}, {"id": 61, "spanish": "Estoy aprendiendo", "english": "I am learning", "topic": "Languages", "type": "Phrase"}, {"id": 62, "spanish": "Hablo", "english": "I speak", "topic": "Languages", "type": "Phrase"}, {"id": 63, "spanish": "Entiendo", "english": "I understand", "topic": "Languages", "type": "Phrase"}, {"id": 64, "spanish": "Español", "english": "Spanish", "topic": "Languages", "type": "Word"}, {"id": 65, "spanish": "Inglés", "english": "English", "topic": "Languages", "type": "Word"}, {"id": 66, "spanish": "Catalán", "english": "Catalan", "topic": "Languages", "type": "Word"}, {"id": 67, "spanish": "Francés", "english": "French", "topic": "Languages", "type": "Word"}, {"id": 68, "spanish": "Alemán", "english": "German", "topic": "Languages", "type": "Word"}, {"id": 69, "spanish": "Ruso", "english": "Russian", "topic": "Languages", "type": "Word"}, {"id": 70, "spanish": "Trabajo", "english": "Work", "topic": "Work", "type": "Word"}, {"id": 71, "spanish": "Trabajo en", "english": "I work in", "topic": "Work", "type": "Phrase"}, {"id": 72, "spanish": "Soy estudiante", "english": "I am a student", "topic": "Work", "type": "Phrase"}, {"id": 73, "spanish": "Soy científica", "english": "I am a scientist", "topic": "Work", "type": "Phrase"}, {"id": 74, "spanish": "Soy maestra", "english": "I am a teacher", "topic": "Work", "type": "Phrase"}, {"id": 75, "spanish": "Profesor", "english": "Teacher", "topic": "Work", "type": "Word"}, {"id": 76, "spanish": "Investigación", "english": "Research", "topic": "Work", "type": "Word"}, {"id": 77, "spanish": "Laboratorio", "english": "Laboratory", "topic": "Work", "type": "Word"}, {"id": 78, "spanish": "Qué estudiaste", "english": "What did you study", "topic": "Education", "type": "Phrase"}, {"id": 79, "spanish": "Estudié", "english": "I studied", "topic": "Education", "type": "Phrase"}, {"id": 80, "spanish": "Estudio", "english": "I study", "topic": "Education", "type": "Phrase"}, {"id": 81, "spanish": "Grado", "english": "Degree", "topic": "Education", "type": "Word"}, {"id": 82, "spanish": "Máster", "english": "Master's degree", "topic": "Education", "type": "Phrase"}, {"id": 83, "spanish": "Doctorado", "english": "PhD", "topic": "Education", "type": "Word"}, {"id": 84, "spanish": "Idiomas", "english": "Languages", "topic": "Education", "type": "Word"}, {"id": 85, "spanish": "Arqueología", "english": "Archaeology", "topic": "Education", "type": "Word"}, {"id": 86, "spanish": "Biomedicina", "english": "Biomedicine", "topic": "Education", "type": "Word"}, {"id": 87, "spanish": "Bioquímica", "english": "Biochemistry", "topic": "Education", "type": "Word"}, {"id": 88, "spanish": "Tienes pareja", "english": "Do you have a partner", "topic": "Relationships", "type": "Phrase"}, {"id": 89, "spanish": "Pareja", "english": "Partner", "topic": "Relationships", "type": "Word"}, {"id": 90, "spanish": "Tengo pareja", "english": "I have a partner", "topic": "Relationships", "type": "Phrase"}, {"id": 91, "spanish": "No tengo pareja", "english": "I don't have a partner", "topic": "Relationships", "type": "Phrase"}, {"id": 92, "spanish": "Tengo novia", "english": "I have a girlfriend", "topic": "Relationships", "type": "Phrase"}, {"id": 93, "spanish": "Soy soltero", "english": "I am single", "topic": "Relationships", "type": "Phrase"}, {"id": 94, "spanish": "Soy soltera", "english": "I am single", "topic": "Relationships", "type": "Phrase"}, {"id": 95, "spanish": "Estás casado", "english": "Are you married", "topic": "Relationships", "type": "Phrase"}, {"id": 96, "spanish": "Estás casada", "english": "Are you married", "topic": "Relationships", "type": "Phrase"}, {"id": 97, "spanish": "Estoy casado", "english": "I am married", "topic": "Relationships", "type": "Phrase"}, {"id": 98, "spanish": "Estoy casada", "english": "I am married", "topic": "Relationships", "type": "Phrase"}, {"id": 99, "spanish": "Estoy comprometido", "english": "I am engaged", "topic": "Relationships", "type": "Phrase"}, {"id": 100, "spanish": "Tienes hijos", "english": "Do you have children", "topic": "Family", "type": "Phrase"}, {"id": 101, "spanish": "Hijos", "english": "Children", "topic": "Family", "type": "Word"}, {"id": 102, "spanish": "Tengo hijos", "english": "I have children", "topic": "Family", "type": "Phrase"}, {"id": 103, "spanish": "No tengo hijos", "english": "I don't have children", "topic": "Family", "type": "Phrase"}, {"id": 104, "spanish": "Todavía", "english": "Yet / still", "topic": "Family", "type": "Phrase"}, {"id": 105, "spanish": "Hermano", "english": "Brother", "topic": "Family", "type": "Word"}, {"id": 106, "spanish": "Hermana", "english": "Sister", "topic": "Family", "type": "Word"}, {"id": 107, "spanish": "Hermanos", "english": "Siblings", "topic": "Family", "type": "Word"}, {"id": 108, "spanish": "Hermano mayor", "english": "Older brother", "topic": "Family", "type": "Phrase"}, {"id": 109, "spanish": "Hermana menor", "english": "Younger sister", "topic": "Family", "type": "Phrase"}, {"id": 110, "spanish": "Hijo único", "english": "Only child", "topic": "Family", "type": "Phrase"}, {"id": 111, "spanish": "Qué te gusta hacer", "english": "What do you like to do", "topic": "Hobbies", "type": "Phrase"}, {"id": 112, "spanish": "Cuáles son tus hobbies", "english": "What are your hobbies", "topic": "Hobbies", "type": "Phrase"}, {"id": 113, "spanish": "Me gusta", "english": "I like", "topic": "Hobbies", "type": "Phrase"}, {"id": 114, "spanish": "Me encanta", "english": "I love", "topic": "Hobbies", "type": "Phrase"}, {"id": 115, "spanish": "Leer", "english": "To read", "topic": "Hobbies", "type": "Phrase"}, {"id": 116, "spanish": "Viajar", "english": "To travel", "topic": "Hobbies", "type": "Phrase"}, {"id": 117, "spanish": "Cocinar", "english": "To cook", "topic": "Hobbies", "type": "Phrase"}, {"id": 118, "spanish": "Pintar", "english": "To paint", "topic": "Hobbies", "type": "Phrase"}, {"id": 119, "spanish": "Rompecabezas", "english": "Puzzle", "topic": "Hobbies", "type": "Word"}, {"id": 120, "spanish": "Escribir", "english": "To write", "topic": "Hobbies", "type": "Phrase"}, {"id": 121, "spanish": "Música", "english": "Music", "topic": "Hobbies", "type": "Word"}, {"id": 122, "spanish": "Tocar la guitarra", "english": "Play guitar", "topic": "Hobbies", "type": "Phrase"}, {"id": 123, "spanish": "Haces deporte", "english": "Do you do sport", "topic": "Sports", "type": "Phrase"}, {"id": 124, "spanish": "Hago deporte", "english": "I do sport", "topic": "Sports", "type": "Phrase"}, {"id": 125, "spanish": "Natación", "english": "Swimming", "topic": "Sports", "type": "Word"}, {"id": 126, "spanish": "Bailar", "english": "To dance", "topic": "Sports", "type": "Phrase"}, {"id": 127, "spanish": "Correr", "english": "To run", "topic": "Sports", "type": "Phrase"}, {"id": 128, "spanish": "Caminar", "english": "To walk", "topic": "Sports", "type": "Phrase"}, {"id": 129, "spanish": "Gimnasio", "english": "Gym", "topic": "Sports", "type": "Word"}, {"id": 130, "spanish": "Levantar pesas", "english": "Lift weights", "topic": "Sports", "type": "Phrase"}, {"id": 131, "spanish": "Danza contemporánea", "english": "Contemporary dance", "topic": "Sports", "type": "Phrase"}, {"id": 132, "spanish": "Cuál es tu comida favorita", "english": "What is your favorite food", "topic": "Food", "type": "Phrase"}, {"id": 133, "spanish": "Arroz al curry", "english": "Curry rice", "topic": "Food", "type": "Phrase"}, {"id": 134, "spanish": "Tortilla de patatas", "english": "Spanish omelette", "topic": "Food", "type": "Phrase"}, {"id": 135, "spanish": "Sopas", "english": "Soups", "topic": "Food", "type": "Word"}, {"id": 136, "spanish": "Chilaquiles", "english": "Chilaquiles", "topic": "Food", "type": "Word"}, {"id": 137, "spanish": "Canelones", "english": "Cannelloni", "topic": "Food", "type": "Word"}, {"id": 138, "spanish": "Especias", "english": "Spices", "topic": "Food", "type": "Word"}, {"id": 139, "spanish": "Restaurante", "english": "Restaurant", "topic": "Food", "type": "Word"}, {"id": 140, "spanish": "Desayuno", "english": "Breakfast", "topic": "Food", "type": "Word"}, {"id": 141, "spanish": "Cena", "english": "Dinner", "topic": "Food", "type": "Word"}, {"id": 142, "spanish": "Menú", "english": "Menu", "topic": "Food", "type": "Word"}, {"id": 143, "spanish": "Cerveza", "english": "Beer", "topic": "Food", "type": "Word"}, {"id": 144, "spanish": "Vino", "english": "Wine", "topic": "Food", "type": "Word"}, {"id": 145, "spanish": "Agua", "english": "Water", "topic": "Food", "type": "Word"}, {"id": 146, "spanish": "Café", "english": "Coffee", "topic": "Food", "type": "Word"}, {"id": 147, "spanish": "Té", "english": "Tea", "topic": "Food", "type": "Word"}, {"id": 148, "spanish": "Buen provecho", "english": "Enjoy your meal", "topic": "Food", "type": "Phrase"}, {"id": 149, "spanish": "La cuenta", "english": "The bill", "topic": "Food", "type": "Phrase"}, {"id": 150, "spanish": "Propina", "english": "Tip", "topic": "Food", "type": "Word"}, {"id": 151, "spanish": "Tienda", "english": "Shop", "topic": "Shopping", "type": "Word"}, {"id": 152, "spanish": "Supermercado", "english": "Supermarket", "topic": "Shopping", "type": "Word"}, {"id": 153, "spanish": "Mercado", "english": "Market", "topic": "Shopping", "type": "Word"}, {"id": 154, "spanish": "Precio", "english": "Price", "topic": "Shopping", "type": "Word"}, {"id": 155, "spanish": "Oferta", "english": "Sale", "topic": "Shopping", "type": "Word"}, {"id": 156, "spanish": "Barato", "english": "Cheap", "topic": "Shopping", "type": "Word"}, {"id": 157, "spanish": "Caro", "english": "Expensive", "topic": "Shopping", "type": "Word"}, {"id": 158, "spanish": "Cuánto cuesta", "english": "How much does it cost", "topic": "Shopping", "type": "Phrase"}, {"id": 159, "spanish": "Con tarjeta", "english": "With card", "topic": "Shopping", "type": "Phrase"}, {"id": 160, "spanish": "En efectivo", "english": "Cash", "topic": "Shopping", "type": "Phrase"}, {"id": 161, "spanish": "Dónde", "english": "Where", "topic": "Directions", "type": "Word"}, {"id": 162, "spanish": "Derecha", "english": "Right", "topic": "Directions", "type": "Word"}, {"id": 163, "spanish": "Izquierda", "english": "Left", "topic": "Directions", "type": "Word"}, {"id": 164, "spanish": "Todo recto", "english": "Straight ahead", "topic": "Directions", "type": "Phrase"}, {"id": 165, "spanish": "Metro", "english": "Subway", "topic": "Transport", "type": "Word"}, {"id": 166, "spanish": "Aeropuerto", "english": "Airport", "topic": "Transport", "type": "Word"}, {"id": 167, "spanish": "Entrada", "english": "Entrance", "topic": "Transport", "type": "Word"}, {"id": 168, "spanish": "Salida", "english": "Exit", "topic": "Transport", "type": "Word"}, {"id": 169, "spanish": "Equipaje", "english": "Luggage", "topic": "Transport", "type": "Word"}, {"id": 170, "spanish": "Boleto", "english": "Ticket", "topic": "Transport", "type": "Word"}, {"id": 171, "spanish": "Billete", "english": "Ticket", "topic": "Transport", "type": "Word"}, {"id": 172, "spanish": "Ayuda", "english": "Help", "topic": "Transport", "type": "Word"}, {"id": 173, "spanish": "aprender", "english": "to learn", "topic": "Verb", "type": "Verb"}, {"id": 174, "spanish": "ir", "english": "to go", "topic": "Verb", "type": "Verb"}, {"id": 175, "spanish": "hablar", "english": "to speak", "topic": "Verb", "type": "Verb"}, {"id": 176, "spanish": "hacer", "english": "to do / make", "topic": "Verb", "type": "Verb"}, {"id": 177, "spanish": "vivir", "english": "to live", "topic": "Verb", "type": "Verb"}, {"id": 178, "spanish": "mirar", "english": "to watch / look", "topic": "Verb", "type": "Verb"}, {"id": 179, "spanish": "escuchar", "english": "to listen", "topic": "Verb", "type": "Verb"}, {"id": 180, "spanish": "estar", "english": "to be (temporary)", "topic": "Verb", "type": "Verb"}, {"id": 181, "spanish": "venir", "english": "to come", "topic": "Verb", "type": "Verb"}, {"id": 182, "spanish": "traer", "english": "to bring", "topic": "Verb", "type": "Verb"}, {"id": 183, "spanish": "llevar", "english": "to carry / take", "topic": "Verb", "type": "Verb"}, {"id": 184, "spanish": "olvidar", "english": "to forget", "topic": "Verb", "type": "Verb"}, {"id": 185, "spanish": "ver", "english": "to see", "topic": "Verb", "type": "Verb"}, {"id": 186, "spanish": "vender", "english": "to sell", "topic": "Verb", "type": "Verb"}, {"id": 187, "spanish": "costar", "english": "to cost", "topic": "Verb", "type": "Verb"}, {"id": 188, "spanish": "intentar", "english": "to try", "topic": "Verb", "type": "Verb"}, {"id": 189, "spanish": "estudiar", "english": "to study", "topic": "Verb", "type": "Verb"}, {"id": 190, "spanish": "jugar", "english": "to play", "topic": "Verb", "type": "Verb"}, {"id": 191, "spanish": "poner", "english": "to put", "topic": "Verb", "type": "Verb"}, {"id": 192, "spanish": "llegar", "english": "to arrive", "topic": "Verb", "type": "Verb"}, {"id": 193, "spanish": "volver", "english": "to return", "topic": "Verb", "type": "Verb"}, {"id": 194, "spanish": "decir", "english": "to say", "topic": "Verb", "type": "Verb"}, {"id": 195, "spanish": "encontrar", "english": "to find", "topic": "Verb", "type": "Verb"}, {"id": 196, "spanish": "conocer", "english": "to meet / know people", "topic": "Verb", "type": "Verb"}, {"id": 197, "spanish": "saber", "english": "to know (fact)", "topic": "Verb", "type": "Verb"}, {"id": 198, "spanish": "tener", "english": "to have", "topic": "Verb", "type": "Verb"}, {"id": 199, "spanish": "sentir", "english": "to feel", "topic": "Verb", "type": "Verb"}, {"id": 200, "spanish": "pensar", "english": "to think", "topic": "Verb", "type": "Verb"}, {"id": 201, "spanish": "buscar", "english": "to search", "topic": "Verb", "type": "Verb"}, {"id": 202, "spanish": "preferir", "english": "to prefer", "topic": "Verb", "type": "Verb"}, {"id": 203, "spanish": "trabajar", "english": "to work", "topic": "Verb", "type": "Verb"}, {"id": 204, "spanish": "poder", "english": "to be able to", "topic": "Verb", "type": "Verb"}, {"id": 205, "spanish": "explicar", "english": "to explain", "topic": "Verb", "type": "Verb"}, {"id": 206, "spanish": "tomar", "english": "to drink / take", "topic": "Verb", "type": "Verb"}, {"id": 207, "spanish": "dar", "english": "to give", "topic": "Verb", "type": "Verb"}, {"id": 208, "spanish": "beber", "english": "to drink", "topic": "Verb", "type": "Verb"}, {"id": 209, "spanish": "comer", "english": "to eat", "topic": "Verb", "type": "Verb"}, {"id": 210, "spanish": "preguntar", "english": "to ask", "topic": "Verb", "type": "Verb"}, {"id": 211, "spanish": "recomendar", "english": "to recommend", "topic": "Verb", "type": "Verb"}, {"id": 212, "spanish": "entender", "english": "to understand", "topic": "Verb", "type": "Verb"}, {"id": 213, "spanish": "oír", "english": "to hear", "topic": "Verb", "type": "Verb"}, {"id": 214, "spanish": "repetir", "english": "to repeat", "topic": "Verb", "type": "Verb"}, {"id": 215, "spanish": "dormir", "english": "to sleep", "topic": "Verb", "type": "Verb"}, {"id": 216, "spanish": "querer", "english": "to want", "topic": "Verb", "type": "Verb"}, {"id": 217, "spanish": "alfabeto", "english": "alphabet", "topic": "Noun", "type": "Noun"}, {"id": 218, "spanish": "pelea", "english": "fight", "topic": "Noun", "type": "Noun"}, {"id": 219, "spanish": "fiesta", "english": "party", "topic": "Noun", "type": "Noun"}, {"id": 220, "spanish": "patatas fritas", "english": "french fries", "topic": "Noun", "type": "Noun"}, {"id": 221, "spanish": "parque", "english": "park", "topic": "Place", "type": "Place"}, {"id": 222, "spanish": "sombrero", "english": "hat", "topic": "Noun", "type": "Noun"}, {"id": 223, "spanish": "comunidad", "english": "community", "topic": "Noun", "type": "Noun"}, {"id": 224, "spanish": "comentarios", "english": "comments", "topic": "Noun", "type": "Noun"}, {"id": 225, "spanish": "vídeo", "english": "video", "topic": "Noun", "type": "Noun"}, {"id": 226, "spanish": "cuaderno", "english": "notebook", "topic": "Noun", "type": "Noun"}, {"id": 227, "spanish": "bufanda", "english": "scarf", "topic": "Noun", "type": "Noun"}, {"id": 228, "spanish": "fiebre", "english": "fever", "topic": "Noun", "type": "Noun"}, {"id": 229, "spanish": "libro", "english": "book", "topic": "Noun", "type": "Noun"}, {"id": 230, "spanish": "novelas", "english": "novels", "topic": "Noun", "type": "Noun"}, {"id": 231, "spanish": "botella", "english": "bottle", "topic": "Noun", "type": "Noun"}, {"id": 232, "spanish": "almendras", "english": "almonds", "topic": "Noun", "type": "Noun"}, {"id": 233, "spanish": "avena", "english": "oats", "topic": "Noun", "type": "Noun"}, {"id": 234, "spanish": "historias", "english": "stories", "topic": "Noun", "type": "Noun"}, {"id": 235, "spanish": "plantas", "english": "plants", "topic": "Noun", "type": "Noun"}, {"id": 236, "spanish": "acentos", "english": "accents", "topic": "Noun", "type": "Noun"}];
+const topics = ["Communication", "Directions", "Education", "Family", "Feelings", "Food", "Greetings", "Hobbies", "Introduction", "Languages", "Noun", "Personal info", "Place", "Politeness", "Pronouns", "Relationships", "Shopping", "Sports", "Transport", "Verb", "Work"];
+const types = ["All", "Verb", "Noun", "Place", "Phrase", "Word"];
+
+let state = {
+  mode: "random",
+  topicFilter: "All",
+  typeFilter: "All",
+  threshold: 75,
+  deck: [],
+  index: 0,
+  checks: 0,
+  accuracySum: 0,
+  skips: 0,
+  reveals: 0,
+  revealedLog: [],
+  mistakesLog: [],
+  passesLog: [],
+  wordProgress: {}
+};
+
+function saveState() {
+  localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+}
+function loadState() {
+  const raw = localStorage.getItem(STORAGE_KEY);
+  if (!raw) return;
+  try {
+    const parsed = JSON.parse(raw);
+    state = Object.assign(state, parsed);
+  } catch(e) {}
+}
+function setMessage(t) { document.getElementById("msg").textContent = t; }
+function normalize(text) { return text.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g,"").replace(/[^\w\s/]/g," ").replace(/\s+/g," ").trim(); }
+function levenshtein(a,b){const m=a.length,n=b.length;if(!m)return n;if(!n)return m;const dp=Array.from({length:m+1},()=>Array(n+1).fill(0));for(let i=0;i<=m;i++)dp[i][0]=i;for(let j=0;j<=n;j++)dp[0][j]=j;for(let i=1;i<=m;i++){for(let j=1;j<=n;j++){const c=a[i-1]===b[j-1]?0:1;dp[i][j]=Math.min(dp[i-1][j]+1,dp[i][j-1]+1,dp[i-1][j-1]+c)}}return dp[m][n]}
+function scoreAnswer(a,b){a=normalize(a);b=normalize(b);if(!a&&!b)return 100;if(!a||!b)return 0;const opts=b.split("/").map(x=>x.trim()).filter(Boolean);let best=0;opts.forEach(opt=>{const dist=levenshtein(a,opt);const maxLen=Math.max(a.length,opt.length)||1;const s=Math.max(0,Math.round((1-dist/maxLen)*100));if(s>best)best=s});return best}
+function shuffle(arr){const a=[...arr];for(let i=a.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[a[i],a[j]]=[a[j],a[i]]}return a}
+function cap(t){return t?t.charAt(0).toUpperCase()+t.slice(1):t}
+function transform(item){const m=state.mode==="random"?(Math.random()<0.5?"s2e":"e2s"):state.mode;if(m==="s2e"){return {id:item.id,front:cap(item.spanish),back:cap(item.english),rawBack:item.english,spanish:item.spanish,english:item.english,modeLabel:"Spanish → English",topic:item.topic,type:item.type}}return {id:item.id,front:cap(item.english),back:cap(item.spanish),rawBack:item.spanish,spanish:item.spanish,english:item.english,modeLabel:"English → Spanish",topic:item.topic,type:item.type}}
+function rebuildDeck(preserveIndex=false){const currentId = preserveIndex && state.deck.length ? state.deck[state.index]?.id : null; state.deck=shuffle(baseDeck.filter(x=>(state.topicFilter==="All"||x.topic===state.topicFilter)&&(state.typeFilter==="All"||x.type===state.typeFilter)).map(transform)); if (currentId){const idx=state.deck.findIndex(x=>x.id===currentId); state.index=idx>=0?idx:0;} else {state.index=0;} saveState(); render()}
+function updateStats(){document.getElementById("totalCount").textContent=baseDeck.length;document.getElementById("cardNum").textContent=state.deck.length?state.index+1:0;document.getElementById("visibleCount").textContent=state.deck.length;document.getElementById("checks").textContent=state.checks;document.getElementById("avg").textContent=state.checks?Math.round(state.accuracySum/state.checks)+"%":"0%";document.getElementById("skips").textContent=state.skips;document.getElementById("reveals").textContent=state.reveals;document.getElementById("mistakesCount").textContent=state.mistakesLog.length;document.getElementById("passesCount").textContent=state.passesLog.length}
+function current(){return state.deck[state.index]}
+function pushUniqueLog(arr, entry){arr.unshift(entry); if(arr.length>200) arr.pop();}
+function renderLogs(){
+  renderList("revealed", state.revealedLog, "No revealed words yet.");
+  renderList("mistakes", state.mistakesLog, "No mistakes yet.");
+  renderList("passes", state.passesLog, "No passed words yet.");
+}
+function renderList(name, list, emptyText){
+  const el = document.getElementById("list-"+name);
+  if(!list.length){ el.innerHTML = `<div class="empty">${emptyText}</div>`; return; }
+  el.innerHTML = list.map(item => `
+    <div class="item">
+      <div class="itemHead">${item.spanish} → ${item.english}</div>
+      <div class="itemMeta">${item.topic} • ${item.type}${item.score!==undefined ? " • score: "+item.score+"%" : ""}</div>
+    </div>
+  `).join("");
+}
+function render(){updateStats();renderLogs();const root=document.getElementById("card");if(!state.deck.length){root.innerHTML='<div class="feedback bad">No cards in this filter combination.</div>';setMessage("Choose another topic or type.");return}const c=current();root.innerHTML=`<div class="badges"><div class="badge">${c.modeLabel}</div><div class="badge">${c.topic}</div><div class="badge">${c.type}</div></div><div class="word">${c.front}</div><input id="answer" type="text" placeholder="Type your answer here"><div class="controls"><button class="check" onclick="checkAnswer()">Check</button><button class="reveal" onclick="revealAnswer()">Reveal</button><button class="pronounce" onclick="pronounceWord(false)">Pronounce</button><button class="pronounce" onclick="pronounceWord(true)">Slow</button><button class="skip" onclick="skipCard()">Skip</button><button class="next" onclick="nextCard()">Next</button></div><div id="feedback" class="feedback"></div><div id="translation" class="translation">${c.back}</div>`; saveState();}
+function checkAnswer(){if(!state.deck.length)return;const input=document.getElementById("answer");if(!input||!input.value.trim()){setMessage("Type an answer first.");return}const c=current();const score=scoreAnswer(input.value.trim(),c.rawBack);state.checks++;state.accuracySum+=score;state.wordProgress[c.id]=state.wordProgress[c.id]||{};state.wordProgress[c.id].lastScore=score;state.wordProgress[c.id].checks=(state.wordProgress[c.id].checks||0)+1;const fb=document.getElementById("feedback");if(score>=state.threshold){fb.className="feedback good";fb.innerHTML=`Correct enough: ${score}%`;}else if(score>=state.threshold-15){fb.className="feedback mid";fb.innerHTML=`Close: ${score}% <div class="small">Target: ${c.back}</div>`;pushUniqueLog(state.mistakesLog,{spanish:c.spanish,english:c.english,topic:c.topic,type:c.type,score:score});}else{fb.className="feedback bad";fb.innerHTML=`Not correct: ${score}% <div class="small">Target: ${c.back}</div>`;pushUniqueLog(state.mistakesLog,{spanish:c.spanish,english:c.english,topic:c.topic,type:c.type,score:score});} saveState(); renderLogs(); updateStats(); setMessage("Answer checked.");}
+function revealAnswer(){const c=current();const t=document.getElementById("translation");if(t)t.classList.add("show");state.reveals++;pushUniqueLog(state.revealedLog,{spanish:c.spanish,english:c.english,topic:c.topic,type:c.type});saveState();renderLogs();updateStats();setMessage("Translation revealed.");}
+function pronounceWord(){if(!("speechSynthesis" in window)){setMessage("Speech is not supported in this browser.");return}const u=new SpeechSynthesisUtterance(current().spanish);u.lang="es-ES";u.rate=0.9;window.speechSynthesis.cancel();window.speechSynthesis.speak(u);setMessage("Pronouncing Spanish term.")}
+function nextCard(){if(!state.deck.length)return;state.index=(state.index+1)%state.deck.length;saveState();render();setMessage("Next card.");}
+function skipCard(){if(!state.deck.length)return;const c=current();state.skips++;pushUniqueLog(state.passesLog,{spanish:c.spanish,english:c.english,topic:c.topic,type:c.type});state.index=(state.index+1)%state.deck.length;saveState();render();setMessage("Card skipped.");}
+function shuffleDeck(){if(!state.deck.length)return;state.deck=shuffle(state.deck);state.index=0;saveState();render();setMessage("Deck shuffled.");}
+function restartDeck(){state.checks=0;state.accuracySum=0;state.skips=0;state.reveals=0;state.index=0;rebuildDeck(false);setMessage("Session restarted.");}
+function clearAllSavedData(){localStorage.removeItem(STORAGE_KEY); location.reload();}
+function setMode(m){state.mode=m;document.querySelectorAll(".modebtn").forEach(b=>b.classList.remove("active"));document.getElementById("mode-"+m).classList.add("active");rebuildDeck(false);setMessage("Mode changed.")}
+function setTopic(v){state.topicFilter=v;rebuildDeck(false);setMessage("Topic changed.")}
+function setType(v){state.typeFilter=v;rebuildDeck(false);setMessage("Type changed.")}
+function setThreshold(v){state.threshold=Number(v);document.getElementById("thresholdText").textContent=state.threshold+"%";saveState();setMessage("Threshold changed.")}
+function showTab(name){document.querySelectorAll(".tabbtn").forEach(b=>b.classList.remove("active"));document.querySelectorAll(".listWrap").forEach(b=>b.classList.remove("active"));document.getElementById("tab-"+name).classList.add("active");document.getElementById("list-"+name).classList.add("active");}
+
+function warmUpVoices(){
+  if(!("speechSynthesis" in window)) return;
+  try {
+    window.speechSynthesis.getVoices();
+    window.speechSynthesis.onvoiceschanged = () => { window.speechSynthesis.getVoices(); };
+  } catch(e) {}
+}
+
+function initFilters() {
+  document.getElementById("totalCount").textContent = baseDeck.length;
+  const topic = document.getElementById("topic");
+  topics.forEach(t => { const o = document.createElement("option"); o.value = t; o.textContent = t; topic.appendChild(o); });
+  const type = document.getElementById("type");
+  types.filter(t => t !== "All").forEach(t => { const o = document.createElement("option"); o.value = t; o.textContent = t; type.appendChild(o); });
+}
+function syncUIFromState(){
+  document.getElementById("topic").value = state.topicFilter;
+  document.getElementById("type").value = state.typeFilter;
+  document.getElementById("threshold").value = state.threshold;
+  document.getElementById("thresholdText").textContent = state.threshold+"%";
+  document.querySelectorAll(".modebtn").forEach(b=>b.classList.remove("active"));
+  const btn = document.getElementById("mode-"+state.mode);
+  if(btn) btn.classList.add("active");
+}
+loadState();
+warmUpVoices();
+initFilters();
+syncUIFromState();
+if(!state.deck || !state.deck.length){ rebuildDeck(false); } else { render(); }
+</script>
+</body>
+</html>
